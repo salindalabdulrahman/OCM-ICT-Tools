@@ -1,4 +1,3 @@
-Clear-Host
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "     OCM ICT EQUIPMENT INSPECTION SYSTEM DATA EXTRACTOR  " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
