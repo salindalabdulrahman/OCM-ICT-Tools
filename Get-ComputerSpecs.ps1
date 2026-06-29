@@ -1,59 +1,70 @@
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "     OCM ICT EQUIPMENT INSPECTION SYSTEM DATA EXTRACTOR  " -ForegroundColor Cyan
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host ""
+Clear-Host
+$OutputText = [System.Collections.Generic.List[string]]::new()
+
+# Function to handle dual output to screen and file collection
+function Out-Both ($text, $color = "White") {
+    Write-Host $text -ForegroundColor $color
+    $global:OutputText.Add($text)
+}
+
+Out-Both "==========================================================" "Cyan"
+Out-Both "     OCM ICT EQUIPMENT INSPECTION SYSTEM DATA EXTRACTOR  " "Cyan"
+Out-Both "==========================================================" "Cyan"
+Out-Both ""
 
 # 1. Computer Name
-Write-Host "• COMPUTER NAME: " -NoNewline -ForegroundColor Yellow
-Write-Host "$(hostname)"
+Out-Both "• COMPUTER NAME: $(hostname)" "Yellow"
 
 # 2. Processor
 $cpu = (Get-CimInstance Win32_Processor).Name.Trim()
-Write-Host "• PROCESSOR: " -NoNewline -ForegroundColor Yellow
-Write-Host "$cpu"
+Out-Both "• PROCESSOR: $cpu" "Yellow"
 
 # 3. Installed RAM
 $ramBytes = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum
 $ramGB = [Math]::Round($ramBytes / 1GB)
-Write-Host "• INSTALLED RAM: " -NoNewline -ForegroundColor Yellow
-Write-Host "$ramGB GB"
+Out-Both "• INSTALLED RAM: $ramGB GB" "Yellow"
 
 # 4. Graphics Card
 $gpu = (Get-CimInstance Win32_VideoController).Name -join " / "
-Write-Host "• GRAPHICS CARD: " -NoNewline -ForegroundColor Yellow
-Write-Host "$gpu"
+Out-Both "• GRAPHICS CARD: $gpu" "Yellow"
 
 # 5. Storage Type
 $drives = Get-PhysicalDisk | Select-Object DeviceId, MediaType, @{Name="SizeGB";Expression={[Math]::Round($_.Size / 1GB)}}
-Write-Host "• STORAGE CATEGORY: " -NoNewline -ForegroundColor Yellow
 $driveTypes = foreach ($d in $drives) { "$($d.MediaType) ($($d.SizeGB)GB)" }
-Write-Host ($driveTypes -join " + ")
+$storageCategory = $driveTypes -join " + "
+Out-Both "• STORAGE CATEGORY: $storageCategory" "Yellow"
 
 # 6. Connectivity & IP Address
 $activeNet = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
 $ipAddr = (Get-NetIPAddress -InterfaceIndex $activeNet.InterfaceIndex -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-Write-Host "• CONNECTIVITY TYPE: " -NoNewline -ForegroundColor Yellow
-Write-Host "$($activeNet.InterfaceDescription)"
-Write-Host "• IP ADDRESS: " -NoNewline -ForegroundColor Yellow
-Write-Host "$ipAddr"
+Out-Both "• CONNECTIVITY TYPE: $($activeNet.InterfaceDescription)" "Yellow"
+Out-Both "• IP ADDRESS: $ipAddr" "Yellow"
 
 # 7. System Restore Point Status
 $restorePoints = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
-Write-Host "• SYSTEM RESTORE POINT EXIST?: " -NoNewline -ForegroundColor Yellow
-if ($restorePoints) { Write-Host "YES" -ForegroundColor Green } else { Write-Host "NO (Action Required)" -ForegroundColor Red }
+if ($restorePoints) { 
+    Out-Both "• SYSTEM RESTORE POINT EXIST?: YES" "Green" 
+} else { 
+    Out-Both "• SYSTEM RESTORE POINT EXIST?: NO (Action Required)" "Red" 
+}
 
 # 8. WinSAT / Hardware Scores
-Write-Host ""
-Write-Host "--- WINSAT HARDWARE SCORES ---" -ForegroundColor Cyan
+Out-Both "" "White"
+Out-Both "--- WINSAT HARDWARE SCORES ---" "Cyan"
 $winsat = Get-CimInstance Win32_WinSAT -ErrorAction SilentlyContinue
 if ($winsat) {
-    Write-Host "• CPU Score:      " -NoNewline -ForegroundColor Yellow; Write-Host $winsat.CPUScore
-    Write-Host "• D3D Score:      " -NoNewline -ForegroundColor Yellow; Write-Host $winsat.D3DScore
-    Write-Host "• Disk Score:     " -NoNewline -ForegroundColor Yellow; Write-Host $winsat.DiskScore
-    Write-Host "• Graphics Score: " -NoNewline -ForegroundColor Yellow; Write-Host $winsat.GraphicsScore
-    Write-Host "• Memory Score:   " -NoNewline -ForegroundColor Yellow; Write-Host $winsat.MemoryScore
-    Write-Host "• WinSPR Level:   " -NoNewline -ForegroundColor Yellow; Write-Host $winsat.WinSPRLevel -Font-style Bold
+    Out-Both "• CPU Score:      $($winsat.CPUScore)" "Yellow"
+    Out-Both "• D3D Score:      $($winsat.D3DScore)" "Yellow"
+    Out-Both "• Disk Score:     $($winsat.DiskScore)" "Yellow"
+    Out-Both "• Graphics Score: $($winsat.GraphicsScore)" "Yellow"
+    Out-Both "• Memory Score:   $($winsat.MemoryScore)" "Yellow"
+    Out-Both "• WinSPR Level:   $($winsat.WinSPRLevel)" "Green"
 } else {
-    Write-Host "⚠️ No WinSAT score found. Run 'winsat formal' first!" -ForegroundColor Change
+    Out-Both "⚠️ No WinSAT score found. Run 'winsat formal' first!" "Red"
 }
-Write-Host "==========================================================" -ForegroundColor Cyan
+Out-Both "==========================================================" "Cyan"
+
+# Save the gathered output directly to the desktop environment
+$DesktopPath = "$env:USERPROFILE\Desktop\Inspection_Data.txt"
+$OutputText | Out-File -FilePath $DesktopPath -Force
+Write-Host "`n✅ Success! Data saved directly to Desktop as: Inspection_Data.txt" -ForegroundColor Green
